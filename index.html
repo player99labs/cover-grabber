@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Album Cover Grabber</title>
+<style>
+  :root {
+    --bg: #0e0e10;
+    --panel: #18181b;
+    --panel2: #202024;
+    --border: #2a2a2e;
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --accent: #a238ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+  h1 { font-size: 34px; font-weight: 600; margin: 12px 0 36px; letter-spacing: -0.01em; }
+  .search {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 720px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  input {
+    flex: 1;
+    min-width: 180px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 16px 20px;
+    border-radius: 10px;
+    font-size: 18px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { opacity: 0.9; }
+  .status { color: var(--muted); font-size: 14px; min-height: 20px; margin-bottom: 16px; }
+
+  /* Mode toggle */
+  .modebar { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 720px; margin-bottom: 14px; }
+  .mode { background: var(--panel); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; font-size: 13px; }
+  .mode.on { background: var(--accent); border-color: var(--accent); }
+  .mode:hover { opacity: 1; border-color: var(--accent); }
+  .modehint { font-size: 12.5px; color: var(--muted); }
+
+  /* Selection tray (batch mode) */
+  .tray { display: none; width: 100%; max-width: 720px; margin-bottom: 18px; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; flex-direction: column; gap: 12px; }
+  .tray-items { display: flex; flex-wrap: wrap; gap: 10px; }
+  .tray-thumb { position: relative; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; }
+  .tray-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tray-thumb .x { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,.7); color: #fff; font-size: 12px; line-height: 18px; text-align: center; cursor: pointer; }
+  .tray-thumb .x:hover { background: #e11d48; }
+  .tray-dl { width: auto; align-self: flex-start; }
+  .card.picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+
+  #site-credit { margin-top: auto; padding-top: 40px; font-size: 12.5px; color: var(--muted); text-align: center; letter-spacing: .02em; font-style: italic; }
+  #site-credit a { color: var(--accent); text-decoration: none; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+    width: 100%;
+    max-width: 720px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card img { width: 100%; aspect-ratio: 1; border-radius: 6px; object-fit: cover; display: block; background: var(--panel2); }
+  .card .t { font-size: 12.5px; font-weight: 600; margin: 8px 2px 2px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .s { font-size: 11.5px; color: var(--muted); margin: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .detail { display: none; flex-direction: column; align-items: center; gap: 18px; width: 100%; max-width: 560px; }
+  .back { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); color: var(--text); padding: 8px 14px; }
+  .back:hover { border-color: var(--accent); opacity: 1; }
+  .art { width: 100%; max-width: 500px; aspect-ratio: 1; border-radius: 12px; background: var(--panel); object-fit: cover; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+  .meta { width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .meta-row { display: flex; gap: 10px; padding: 5px 0; font-size: 14px; }
+  .meta-row .label { color: var(--muted); width: 90px; flex-shrink: 0; }
+  .meta-row .value { color: var(--text); font-weight: 500; }
+  .download { width: 100%; background: var(--panel); border: 1px solid var(--border); color: var(--text); }
+  .download:hover { border-color: var(--accent); opacity: 1; }
+</style>
+</head>
+<body>
+  <h1>🎵 Album Cover Grabber</h1>
+
+  <div class="search">
+    <input id="query" type="text" placeholder="Song and artist — e.g. P.Y.T. Michael Jackson" />
+    <button onclick="search()">Search</button>
+  </div>
+
+  <div class="modebar">
+    <button id="modeBtn" class="mode" onclick="toggleMode()">Batch mode: Off</button>
+    <span class="modehint" id="modeHint"></span>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="tray" id="tray">
+    <div class="tray-items" id="trayItems"></div>
+    <button class="download tray-dl" onclick="downloadAll()">⬇ Download all (<span id="trayCount">0</span>)</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="detail" id="detail">
+    <button class="back" onclick="showGrid()">← Back to results</button>
+    <img class="art" id="art" alt="Album cover" />
+    <div class="meta">
+      <div class="meta-row"><span class="label">Album</span><span class="value" id="m-album"></span></div>
+      <div class="meta-row"><span class="label">Artist</span><span class="value" id="m-artist"></span></div>
+      <div class="meta-row"><span class="label">Year</span><span class="value" id="m-year"></span></div>
+      <div class="meta-row"><span class="label">Track</span><span class="value" id="m-track"></span></div>
+    </div>
+    <button class="download" onclick="download()">⬇ Download cover (1000×1000)</button>
+  </div>
+
+<script>
+let results = [], current = null;
+let batchMode = false, batch = [];
+
+function yearFromDate(d) { return d ? String(d).slice(0, 4) : null; }
+function cleanName(r) { return `${r.album} - ${r.artist}`.replace(/[^\w\s-]/g, "").trim(); }
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* JSONP loader — works from file:// (no server needed) */
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = "cb" + Math.random().toString(36).slice(2);
+    const sep = url.includes("?") ? "&" : "?";
+    const script = document.createElement("script");
+    const timer = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 12000);
+    function cleanup() { clearTimeout(timer); delete window[cb]; script.remove(); }
+    window[cb] = d => { cleanup(); resolve(d); };
+    script.onerror = () => { cleanup(); reject(new Error("blocked")); };
+    script.src = `${url}${sep}output=jsonp&callback=${cb}`;
+    document.body.appendChild(script);
+  });
+}
+
+async function search() {
+  const q = document.getElementById("query").value.trim();
+  const status = document.getElementById("status");
+  const grid = document.getElementById("grid");
+
+  if (!q) { status.textContent = "Enter a song and artist."; return; }
+
+  status.textContent = "Searching…";
+  grid.innerHTML = "";
+  document.getElementById("detail").style.display = "none";
+
+  const term = encodeURIComponent(q);
+
+  try {
+    const data = await jsonp(`https://api.deezer.com/search?q=${term}&limit=100`);
+    let recs = (data.data || []).filter(t => t.album && t.album.cover_medium).map(t => ({
+      album: t.album.title,
+      artist: t.artist ? t.artist.name : "",
+      track: t.title,
+      year: null,
+      albumId: t.album.id,
+      thumb: t.album.cover_medium,
+      full: t.album.cover_xl || t.album.cover_big,
+    }));
+
+    // De-duplicate by cover image, so every visually distinct cover shows
+    // (different editions/remasters keep their own art instead of collapsing).
+    const seen = new Set();
+    results = recs.filter(r => {
+      if (seen.has(r.full)) return false;
+      seen.add(r.full); return true;
+    });
+
+    if (results.length === 0) { status.textContent = "No results found. Try different terms."; return; }
+
+    const verb = batchMode ? "click to add to batch" : "click one to view & download";
+    status.textContent = `${results.length} cover${results.length > 1 ? "s" : ""} found — ${verb}`;
+    results.forEach((r, i) => {
+      const card = document.createElement("div");
+      card.className = "card" + (batchMode && batch.some(b => b.full === r.full) ? " picked" : "");
+      card.onclick = () => batchMode ? addToBatch(i, card) : showDetail(i);
+      card.innerHTML = `
+        <img src="${r.thumb}" alt="">
+        <div class="t">${escapeHtml(r.album)}</div>
+        <div class="s">${escapeHtml(r.artist)}</div>`;
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    status.textContent = "Error fetching from Deezer (" + (e.message || e) + ").";
+  }
+}
+
+async function showDetail(i) {
+  const r = results[i];
+  current = r;
+  document.getElementById("art").src = r.full;
+  document.getElementById("m-album").textContent = r.album || "—";
+  document.getElementById("m-artist").textContent = r.artist || "—";
+  document.getElementById("m-track").textContent = r.track || "—";
+  document.getElementById("m-year").textContent = r.year || "…";
+  document.getElementById("grid").style.display = "none";
+  document.getElementById("status").textContent = "";
+  document.getElementById("detail").style.display = "flex";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  // Deezer search omits release date — fetch it for the chosen album
+  if (!r.year && r.albumId) {
+    try {
+      const alb = await jsonp(`https://api.deezer.com/album/${r.albumId}`);
+      r.year = yearFromDate(alb.release_date) || "—";
+    } catch { r.year = "—"; }
+    if (current === r) document.getElementById("m-year").textContent = r.year;
+  }
+}
+
+function showGrid() {
+  document.getElementById("detail").style.display = "none";
+  document.getElementById("grid").style.display = "grid";
+  document.getElementById("status").textContent =
+    `${results.length} cover${results.length > 1 ? "s" : ""} found — click one to view & download`;
+}
+
+async function downloadOne(rec) {
+  const url = rec.full;
+  const name = (cleanName(rec) || "album-cover") + ".jpg";
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    window.open(url, "_blank");
+  }
+}
+
+function download() { if (current) downloadOne(current); }
+
+/* ---------- batch mode ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function toggleMode() {
+  batchMode = !batchMode;
+  const btn = document.getElementById("modeBtn");
+  btn.textContent = "Batch mode: " + (batchMode ? "On" : "Off");
+  btn.classList.toggle("on", batchMode);
+  document.getElementById("modeHint").textContent =
+    batchMode ? "Search, click covers to collect them, then Download all." : "";
+  document.getElementById("tray").style.display = batchMode ? "flex" : "none";
+  document.getElementById("detail").style.display = "none";
+  document.getElementById("grid").style.display = "grid";
+  renderGridPicks();
+}
+
+function renderGridPicks() {
+  // refresh picked highlight + click behavior on existing cards
+  document.querySelectorAll("#grid .card").forEach((card, i) => {
+    const r = results[i];
+    if (!r) return;
+    card.onclick = () => batchMode ? addToBatch(i, card) : showDetail(i);
+    card.classList.toggle("picked", batchMode && batch.some(b => b.full === r.full));
+  });
+}
+
+function addToBatch(i, card) {
+  const r = results[i];
+  if (batch.some(b => b.full === r.full)) { // toggle off if already added
+    batch = batch.filter(b => b.full !== r.full);
+  } else {
+    batch.push(r);
+  }
+  card.classList.toggle("picked", batch.some(b => b.full === r.full));
+  renderTray();
+}
+
+function removeFromBatch(full) {
+  batch = batch.filter(b => b.full !== full);
+  renderTray();
+  renderGridPicks();
+}
+
+function renderTray() {
+  const items = document.getElementById("trayItems");
+  document.getElementById("trayCount").textContent = batch.length;
+  items.innerHTML = batch.map(b =>
+    `<div class="tray-thumb" title="${escapeHtml(b.album)} — ${escapeHtml(b.artist)}">
+       <img src="${b.thumb}" alt="">
+       <span class="x" onclick="removeFromBatch('${b.full}')">×</span>
+     </div>`).join("");
+}
+
+async function downloadAll() {
+  if (!batch.length) return;
+  const btn = document.querySelector(".tray-dl");
+  btn.disabled = true;
+  for (const r of batch) { await downloadOne(r); await sleep(500); }
+  btn.disabled = false;
+}
+
+document.querySelectorAll("input[type=text]").forEach(el =>
+  el.addEventListener("keydown", e => { if (e.key === "Enter") search(); })
+);
+
+/* ---------- credit (self-restoring) ---------- */
+(function () {
+  const CREDIT = "made by @player99labs";
+  function ensureCredit() {
+    let el = document.getElementById("site-credit");
+    if (!el) {
+      el = document.createElement("footer");
+      el.id = "site-credit";
+      document.body.appendChild(el);
+    }
+    if (el.textContent !== CREDIT) el.textContent = CREDIT;
+  }
+  ensureCredit();
+  // Re-insert if someone deletes or edits it live
+  new MutationObserver(ensureCredit).observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+</body>
+</html>
