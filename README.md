@@ -13,4 +13,4 @@ I DJ, so I made this to quickly grab clean cover art for sets, captions, and vis
 
 ---
 
-*made by @player99labs*
+*made by [@player99labs](https://github.com/player99labs)*
